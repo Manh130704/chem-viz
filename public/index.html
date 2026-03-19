@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#07090f" />
+    <meta name="description" content="ChemViz — Công cụ học hóa học trực quan cho học sinh THCS. Xem mô hình 3D phân tử, cân bằng phương trình, tính mol và làm quiz tương tác." />
+
+    <!-- Open Graph (chia sẻ lên mạng xã hội) -->
+    <meta property="og:title" content="ChemViz — Hóa học trực quan" />
+    <meta property="og:description" content="Học hóa học qua mô hình 3D, hoạt họa và công cụ tính toán" />
+    <meta property="og:type" content="website" />
+
+    <!-- Favicon SVG inline -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5' fill='%2307090f' stroke='%2338bdf8' stroke-width='6'/><text y='64' x='50' text-anchor='middle' font-size='44' font-family='monospace' font-weight='bold' fill='%2338bdf8'>⬡</text></svg>" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2307090f'/><polygon points='50,8 92,31 92,69 50,92 8,69 8,31' fill='none' stroke='%2338bdf8' stroke-width='5'/><text y='65' x='50' text-anchor='middle' font-size='40' font-family='monospace' font-weight='bold' fill='%2338bdf8'>⬡</text></svg>" />
+
+    <title>ChemViz — Hóa học trực quan</title>
+
+    <style>
+      /* ── LOADING SCREEN ── */
+      #chemviz-loader {
+        position: fixed;
+        inset: 0;
+        background: #07090f;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        gap: 0;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+      }
+
+      #chemviz-loader.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      /* Hex grid background */
+      #chemviz-loader::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+        background-size: 48px 48px;
+        pointer-events: none;
+      }
+
+      /* Radial glow */
+      #chemviz-loader::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(56,189,248,0.07), transparent 70%);
+        pointer-events: none;
+      }
+
+      .loader-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+      }
+
+      /* Hexagon logo */
+      .loader-hex-wrap {
+        position: relative;
+        width: 80px;
+        height: 80px;
+      }
+
+      .loader-hex {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #38bdf8, #818cf8);
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        animation: hex-pulse 1.8s ease-in-out infinite;
+      }
+
+      .loader-hex-ring {
+        position: absolute;
+        inset: -8px;
+        border: 1.5px solid rgba(56,189,248,0.3);
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        animation: hex-ring 1.8s ease-in-out infinite;
+      }
+
+      .loader-hex-ring-2 {
+        position: absolute;
+        inset: -16px;
+        border: 1px solid rgba(56,189,248,0.15);
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        animation: hex-ring 1.8s ease-in-out infinite 0.2s;
+      }
+
+      /* Brand */
+      .loader-brand {
+        font-family: 'Space Mono', 'Courier New', monospace;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #38bdf8;
+        letter-spacing: 0.08em;
+      }
+
+      /* Molecule orbit */
+      .loader-orbit {
+        position: relative;
+        width: 120px;
+        height: 120px;
+      }
+
+      .orbit-ring {
+        position: absolute;
+        inset: 10px;
+        border: 1px dashed rgba(56,189,248,0.15);
+        border-radius: 50%;
+        animation: spin-cw 3s linear infinite;
+      }
+
+      .orbit-ring-2 {
+        position: absolute;
+        inset: 25px;
+        border: 1px dashed rgba(129,140,248,0.15);
+        border-radius: 50%;
+        animation: spin-ccw 2.2s linear infinite;
+      }
+
+      .orbit-dot {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        top: 5px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #38bdf8;
+        box-shadow: 0 0 8px #38bdf8;
+      }
+
+      .orbit-dot-2 {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #818cf8;
+        box-shadow: 0 0 8px #818cf8;
+      }
+
+      /* Progress bar */
+      .loader-progress-wrap {
+        width: 160px;
+        height: 2px;
+        background: rgba(56,189,248,0.1);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .loader-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #38bdf8, #818cf8);
+        border-radius: 2px;
+        animation: progress-fill 1.8s ease-in-out forwards;
+      }
+
+      .loader-text {
+        font-family: 'Space Mono', 'Courier New', monospace;
+        font-size: 0.68rem;
+        color: rgba(56,189,248,0.5);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        animation: text-blink 1.2s ease-in-out infinite;
+      }
+
+      /* Animations */
+      @keyframes hex-pulse {
+        0%, 100% { transform: scale(1);    filter: brightness(1); }
+        50%       { transform: scale(1.06); filter: brightness(1.2); }
+      }
+      @keyframes hex-ring {
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50%       { opacity: 1;   transform: scale(1.05); }
+      }
+      @keyframes spin-cw  { to { transform: rotate(360deg); } }
+      @keyframes spin-ccw { to { transform: rotate(-360deg); } }
+      @keyframes progress-fill {
+        0%   { width: 0%; }
+        60%  { width: 75%; }
+        100% { width: 100%; }
+      }
+      @keyframes text-blink {
+        0%, 100% { opacity: 0.5; }
+        50%       { opacity: 1; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ── LOADING SCREEN ── -->
+    <div id="chemviz-loader">
+      <div class="loader-content">
+        <!-- Logo hex -->
+        <div class="loader-hex-wrap">
+          <div class="loader-hex-ring-2"></div>
+          <div class="loader-hex-ring"></div>
+          <div class="loader-hex">⬡</div>
+        </div>
+
+        <!-- Brand name -->
+        <div class="loader-brand">ChemViz</div>
+
+        <!-- Orbit animation -->
+        <div class="loader-orbit">
+          <div class="orbit-ring">
+            <div class="orbit-dot"></div>
+          </div>
+          <div class="orbit-ring-2">
+            <div class="orbit-dot-2"></div>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="loader-progress-wrap">
+          <div class="loader-progress-bar"></div>
+        </div>
+        <div class="loader-text">Đang tải...</div>
+      </div>
+    </div>
+
+    <!-- ── REACT ROOT ── -->
+    <noscript>Bạn cần bật JavaScript để chạy ứng dụng này.</noscript>
+    <div id="root"></div>
+
+    <script>
+      // Ẩn loader khi React đã mount xong
+      window.__hideLoader = function() {
+        var loader = document.getElementById('chemviz-loader');
+        if (loader) {
+          loader.classList.add('hidden');
+          setTimeout(function() {
+            loader.style.display = 'none';
+          }, 500);
+        }
+      };
+    </script>
+  </body>
+</html>
