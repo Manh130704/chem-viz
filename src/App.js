@@ -3,7 +3,7 @@ import "./styles/global.css";
 
 import LandingPage        from "./components/LandingPage";
 import Navbar             from "./components/Navbar";
-import LoginModal         from "./components/LoginModal";
+import AuthModal          from "./components/AuthModal";
 import ReactionPage       from "./components/ReactionPage";
 import MoleculesPage      from "./components/MoleculesPage";
 import MolCalcPage        from "./components/MolCalcPage";
@@ -13,39 +13,44 @@ import TheoryPage         from "./components/TheoryPage";
 import SolubilityPage     from "./components/SolubilityPage";
 import ActivitySeriesPage from "./components/ActivitySeriesPage";
 import NotFoundPage       from "./components/NotFoundPage";
+import TeacherDashboard   from "./components/TeacherDashboard";
 import { useFavorites }   from "./hooks/useFavorites";
+import { useAuth }        from "./hooks/useAuth";
 
 const VALID_PAGES = [
   "all","hoahop","phanhuy","chay","trunghoa","oxihoa",
   "molecules","balance","molcalc","quiz","theory",
-  "solubility","activity","favorites",
+  "solubility","activity","favorites","dashboard",
 ];
 
 export default function App() {
+  const { user, profile, loading: authLoading, signOut } = useAuth();
+
   const [showLanding,   setShowLanding]   = useState(true);
   const [page,          setPage]          = useState("all");
-  const [user,          setUser]          = useState(null);
-  const [showLogin,     setShowLogin]     = useState(false);
+  const [showAuth,      setShowAuth]      = useState(false);
   const [toast,         setToast]         = useState("");
   const [molCalcPreset, setMolCalcPreset] = useState(null);
   const { favs, toggle, isFav }           = useFavorites();
 
-  // Ẩn loading screen khi React đã mount
+  // Ẩn loading screen
   useEffect(() => {
-    if (window.__hideLoader) {
-      // Đợi thêm 800ms để animation progress bar chạy xong đẹp
-      const t = setTimeout(() => window.__hideLoader(), 800);
+    if (!authLoading && window.__hideLoader) {
+      const t = setTimeout(() => window.__hideLoader(), 600);
       return () => clearTimeout(t);
     }
-  }, []);
+  }, [authLoading]);
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2600);
   };
 
-  const handleLogin  = (name) => { setUser(name); showToast(`✓ Chào mừng, ${name}!`); };
-  const handleLogout = ()     => { setUser(null);  showToast("Đã đăng xuất"); };
+  const handleLogout = async () => {
+    await signOut();
+    showToast("Đã đăng xuất");
+    setPage("all");
+  };
 
   const handleFavToggle = (reaction) => {
     const wasFav = isFav(reaction.id);
@@ -65,11 +70,15 @@ export default function App() {
   };
 
   const renderPage = () => {
-    // 404: trang không hợp lệ
     if (!VALID_PAGES.includes(page)) {
       return <NotFoundPage onGoHome={() => { setShowLanding(true); setPage("all"); }} />;
     }
-
+    if (page === "dashboard") {
+      if (!user || profile?.role !== "teacher") {
+        return <NotFoundPage onGoHome={() => setPage("all")} />;
+      }
+      return <TeacherDashboard />;
+    }
     switch (page) {
       case "molecules":  return <MoleculesPage />;
       case "quiz":       return <QuizPage />;
@@ -79,16 +88,11 @@ export default function App() {
       case "solubility": return <SolubilityPage />;
       case "activity":   return <ActivitySeriesPage />;
       default:           return (
-        <ReactionPage
-          filterType={page}
-          isFav={isFav}
-          onFavToggle={handleFavToggle}
-        />
+        <ReactionPage filterType={page} isFav={isFav} onFavToggle={handleFavToggle} />
       );
     }
   };
 
-  // Landing page
   if (showLanding) {
     return (
       <>
@@ -104,19 +108,20 @@ export default function App() {
         page={page}
         setPage={handleSetPage}
         user={user}
+        profile={profile}
         favCount={favs.length}
-        onLoginClick={() => setShowLogin(true)}
+        onLoginClick={() => setShowAuth(true)}
         onLogout={handleLogout}
         onLogoClick={() => setShowLanding(true)}
       />
 
       {renderPage()}
 
-      {showLogin && (
-        <LoginModal
-          onClose={() => setShowLogin(false)}
-          onLogin={handleLogin}
-        />
+      {showAuth && (
+        <AuthModal onClose={() => {
+          setShowAuth(false);
+          if (user) showToast(`✓ Chào mừng!`);
+        }} />
       )}
 
       {toast && <div className="toast">{toast}</div>}

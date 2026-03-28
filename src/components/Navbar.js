@@ -39,7 +39,6 @@ const GROUPS = [
   },
 ];
 
-// Desktop dropdown
 function Dropdown({ group, page, setPage, onClose }) {
   return (
     <div style={{
@@ -92,14 +91,15 @@ function Dropdown({ group, page, setPage, onClose }) {
   );
 }
 
-export default function Navbar({ page, setPage, user, favCount, onLoginClick, onLogout, onLogoClick }) {
+export default function Navbar({ page, setPage, user, profile, favCount, onLoginClick, onLogout, onLogoClick }) {
   const [open,       setOpen]       = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
     function handler(e) {
-      if (ref.current && !ref.current.contains(e.target) && !document.getElementById("mobile-menu-portal")?.contains(e.target)) {
+      if (ref.current && !ref.current.contains(e.target) &&
+          !document.getElementById("mobile-menu-portal")?.contains(e.target)) {
         setOpen(null);
       }
     }
@@ -108,45 +108,36 @@ export default function Navbar({ page, setPage, user, favCount, onLoginClick, on
   }, []);
 
   const handleSetPage = (key) => {
-    setPage(key);
-    setOpen(null);
-    setMobileOpen(false);
+    setPage(key); setOpen(null); setMobileOpen(false);
   };
 
   const isGroupActive = (group) => group.items.some(i => i.key === page);
 
-  // Mobile menu content rendered via portal
+  const isTeacher = profile?.role === "teacher";
+
+  // Mobile menu portal
   const mobileMenu = mobileOpen ? createPortal(
-    <div
-      id="mobile-menu-portal"
-      style={{
-        position:"fixed", top:"60px", left:0, right:0, bottom:0,
-        background:"rgba(7,9,15,0.98)",
-        zIndex:99998,
-        overflowY:"auto",
-        padding:"0.75rem 1rem 2rem",
-        WebkitOverflowScrolling:"touch",
-      }}
-    >
+    <div id="mobile-menu-portal" style={{
+      position:"fixed", top:"60px", left:0, right:0, bottom:0,
+      background:"rgba(7,9,15,0.98)", zIndex:99998,
+      overflowY:"auto", padding:"0.75rem 1rem 2rem",
+      WebkitOverflowScrolling:"touch",
+    }}>
       {GROUPS.map(group => (
         <div key={group.key} style={{ marginBottom:"1.25rem" }}>
-          {/* Group header */}
           <div style={{
             fontSize:"0.6rem", color:group.color, fontFamily:"var(--mono)",
             letterSpacing:"0.6px", textTransform:"uppercase",
-            padding:"0 0.5rem 0.5rem",
-            borderBottom:"1px solid var(--border)", marginBottom:"0.5rem",
+            padding:"0 0.5rem 0.5rem", borderBottom:"1px solid var(--border)", marginBottom:"0.5rem",
           }}>
             {group.icon} {group.label}
           </div>
-          {/* Items */}
           {group.items.map(item => {
             const tc  = TYPES[item.key];
             const col = tc ? tc.color : group.color;
             const sel = page === item.key;
             return (
-              <button key={item.key}
-                onClick={() => handleSetPage(item.key)}
+              <button key={item.key} onClick={() => handleSetPage(item.key)}
                 style={{
                   width:"100%", border:"none", cursor:"pointer",
                   display:"flex", alignItems:"center", gap:"14px",
@@ -162,35 +153,85 @@ export default function Navbar({ page, setPage, user, favCount, onLoginClick, on
                   display:"flex", alignItems:"center", justifyContent:"center", fontSize:"1.1rem",
                 }}>{item.icon}</div>
                 <div>
-                  <div style={{
-                    fontSize:"0.95rem", fontWeight:sel?600:400,
-                    color:sel?col:"var(--text)", fontFamily:"var(--font)",
-                  }}>{item.label}</div>
+                  <div style={{ fontSize:"0.95rem", fontWeight:sel?600:400, color:sel?col:"var(--text)", fontFamily:"var(--font)" }}>
+                    {item.label}
+                  </div>
                   <div style={{ fontSize:"0.72rem", color:"var(--text3)", marginTop:"2px" }}>{item.desc}</div>
                 </div>
-                {sel && (
-                  <div style={{ marginLeft:"auto", width:"8px", height:"8px", borderRadius:"50%", background:col, flexShrink:0 }}/>
-                )}
+                {sel && <div style={{ marginLeft:"auto", width:"8px", height:"8px", borderRadius:"50%", background:col }}/>}
               </button>
             );
           })}
         </div>
       ))}
 
-      {/* Auth */}
-      <div style={{ borderTop:"1px solid var(--border)", paddingTop:"1rem", marginTop:"0.5rem" }}>
+      {/* Teacher dashboard link */}
+      {isTeacher && (
+        <div style={{ marginBottom:"1.25rem" }}>
+          <div style={{
+            fontSize:"0.6rem", color:"#818cf8", fontFamily:"var(--mono)",
+            letterSpacing:"0.6px", textTransform:"uppercase",
+            padding:"0 0.5rem 0.5rem", borderBottom:"1px solid var(--border)", marginBottom:"0.5rem",
+          }}>
+            👨‍🏫 Giáo viên
+          </div>
+          <button onClick={() => handleSetPage("dashboard")}
+            style={{
+              width:"100%", border:"none", cursor:"pointer",
+              display:"flex", alignItems:"center", gap:"14px",
+              padding:"13px 12px", borderRadius:"11px",
+              background: page==="dashboard" ? "rgba(129,140,248,0.15)" : "transparent",
+              textAlign:"left",
+            }}
+          >
+            <div style={{
+              width:"40px", height:"40px", borderRadius:"10px",
+              background:"rgba(129,140,248,0.18)", border:"1px solid rgba(129,140,248,0.28)",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:"1.1rem",
+            }}>📊</div>
+            <div>
+              <div style={{ fontSize:"0.95rem", color:"#818cf8", fontFamily:"var(--font)" }}>Dashboard</div>
+              <div style={{ fontSize:"0.72rem", color:"var(--text3)", marginTop:"2px" }}>Quản lý học sinh</div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Auth mobile */}
+      <div style={{ borderTop:"1px solid var(--border)", paddingTop:"1rem" }}>
         {user ? (
-          <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
-            <div className="avatar">{user[0].toUpperCase()}</div>
-            <span style={{ color:"var(--text)", fontSize:"0.9rem" }}>{user}</span>
-            <button className="btn-logout" onClick={() => { onLogout(); setMobileOpen(false); }} style={{ marginLeft:"auto" }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
+            <div style={{
+              display:"flex", alignItems:"center", gap:"10px",
+              background:"var(--bg3)", border:"1px solid var(--border)",
+              borderRadius:"10px", padding:"0.75rem",
+            }}>
+              <div style={{
+                width:"36px", height:"36px", borderRadius:"50%",
+                background:"linear-gradient(135deg,var(--accent),var(--accent2))",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:"0.88rem", fontWeight:700, color:"white",
+              }}>
+                {profile?.full_name?.[0]?.toUpperCase() || "U"}
+              </div>
+              <div>
+                <div style={{ fontSize:"0.88rem", fontWeight:500, color:"var(--text)" }}>
+                  {profile?.full_name || "Người dùng"}
+                </div>
+                <div style={{ fontSize:"0.68rem", color:"var(--text3)" }}>
+                  {profile?.role === "teacher" ? "👨‍🏫 Giáo viên" : `🎓 Lớp ${profile?.class_name}`}
+                </div>
+              </div>
+            </div>
+            <button className="btn-logout" onClick={() => { onLogout(); setMobileOpen(false); }}
+              style={{ width:"100%", textAlign:"center", padding:"10px" }}>
               Đăng xuất
             </button>
           </div>
         ) : (
           <button className="btn-login" onClick={() => { onLoginClick(); setMobileOpen(false); }}
             style={{ width:"100%", justifyContent:"center", padding:"12px" }}>
-            👤 Đăng nhập
+            👤 Đăng nhập / Đăng ký
           </button>
         )}
       </div>
@@ -202,13 +243,12 @@ export default function Navbar({ page, setPage, user, favCount, onLoginClick, on
     <>
       <nav className="navbar" ref={ref} style={{ padding:"0 1rem" }}>
         {/* Logo */}
-        <div className="logo"
-          onClick={() => { setOpen(null); setMobileOpen(false); onLogoClick ? onLogoClick() : setPage("all"); }}>
+        <div className="logo" onClick={() => { setOpen(null); setMobileOpen(false); onLogoClick ? onLogoClick() : setPage("all"); }}>
           <div className="logo-hex">⬡</div>
           <span>ChemViz</span>
         </div>
 
-        {/* ── Desktop nav ── */}
+        {/* Desktop nav */}
         <div className="nav-center nav-desktop" style={{ gap:"2px", overflow:"visible" }}>
           {GROUPS.filter(g => g.key !== "favorites").map(group => {
             const active = isGroupActive(group);
@@ -227,20 +267,16 @@ export default function Navbar({ page, setPage, user, favCount, onLoginClick, on
                     <polyline points="6 9 12 15 18 9"/>
                   </svg>
                 </button>
-                {isOpen && (
-                  <Dropdown group={group} page={page} setPage={handleSetPage} onClose={() => setOpen(null)} />
-                )}
+                {isOpen && <Dropdown group={group} page={page} setPage={handleSetPage} onClose={() => setOpen(null)} />}
               </div>
             );
           })}
 
           <div style={{ width:"1px", height:"16px", background:"var(--border)", alignSelf:"center", margin:"0 4px" }}/>
 
-          <button
-            className={`nav-item ${page==="favorites"?"active":""}`}
+          <button className={`nav-item ${page==="favorites"?"active":""}`}
             onClick={() => handleSetPage("favorites")}
-            style={{ display:"flex", alignItems:"center", gap:"4px" }}
-          >
+            style={{ display:"flex", alignItems:"center", gap:"4px" }}>
             ❤️
             {favCount > 0 && (
               <span style={{ background:"#f87171", color:"white", fontSize:"0.52rem", fontFamily:"var(--mono)", fontWeight:700, padding:"1px 5px", borderRadius:"10px" }}>
@@ -248,22 +284,47 @@ export default function Navbar({ page, setPage, user, favCount, onLoginClick, on
               </span>
             )}
           </button>
+
+          {/* Teacher dashboard */}
+          {isTeacher && (
+            <button className={`nav-item ${page==="dashboard"?"active":""}`}
+              onClick={() => handleSetPage("dashboard")}>
+              📊 Dashboard
+            </button>
+          )}
         </div>
 
         {/* Desktop auth */}
         <div className="nav-right nav-desktop">
           {user ? (
-            <div className="user-pill">
-              <div className="avatar">{user[0].toUpperCase()}</div>
-              <span className="user-name">{user}</span>
+            <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+              <div style={{
+                display:"flex", alignItems:"center", gap:"8px",
+                background:"var(--bg3)", border:"1px solid var(--border)",
+                padding:"4px 12px 4px 4px", borderRadius:"100px",
+              }}>
+                <div className="avatar">
+                  {profile?.full_name?.[0]?.toUpperCase() || "U"}
+                </div>
+                <div>
+                  <div style={{ fontSize:"0.8rem", fontWeight:500, color:"var(--text)", lineHeight:1 }}>
+                    {profile?.full_name || "Người dùng"}
+                  </div>
+                  <div style={{ fontSize:"0.62rem", color:"var(--text3)", lineHeight:1, marginTop:"1px" }}>
+                    {profile?.role === "teacher" ? "Giáo viên" : `Lớp ${profile?.class_name}`}
+                  </div>
+                </div>
+              </div>
               <button className="btn-logout" onClick={onLogout}>Đăng xuất</button>
             </div>
           ) : (
-            <button className="btn-login" onClick={onLoginClick}>👤 Đăng nhập</button>
+            <button className="btn-login" onClick={onLoginClick}>
+              👤 Đăng nhập
+            </button>
           )}
         </div>
 
-        {/* ── Mobile right ── */}
+        {/* Mobile right */}
         <div className="nav-mobile-right">
           {favCount > 0 && (
             <button onClick={() => handleSetPage("favorites")} style={{
@@ -276,34 +337,16 @@ export default function Navbar({ page, setPage, user, favCount, onLoginClick, on
             </button>
           )}
 
-          {/* Hamburger button */}
-          <button
-            onClick={() => setMobileOpen(v => !v)}
-            style={{
-              background: mobileOpen ? "rgba(56,189,248,0.12)" : "var(--bg3)",
-              border:`1px solid ${mobileOpen ? "rgba(56,189,248,0.4)" : "var(--border)"}`,
-              borderRadius:"10px", padding:"9px 11px", cursor:"pointer",
-              display:"flex", flexDirection:"column", gap:"5px",
-              alignItems:"center", justifyContent:"center",
-            }}
-          >
-            <span style={{
-              display:"block", width:"20px", height:"2px",
-              background: mobileOpen ? "var(--accent)" : "var(--text2)",
-              borderRadius:"2px", transition:"all 0.25s",
-              transform: mobileOpen ? "rotate(45deg) translate(5px, 5px)" : "none",
-            }}/>
-            <span style={{
-              display:"block", width:"20px", height:"2px",
-              background: mobileOpen ? "transparent" : "var(--text2)",
-              borderRadius:"2px", transition:"all 0.25s",
-            }}/>
-            <span style={{
-              display:"block", width:"20px", height:"2px",
-              background: mobileOpen ? "var(--accent)" : "var(--text2)",
-              borderRadius:"2px", transition:"all 0.25s",
-              transform: mobileOpen ? "rotate(-45deg) translate(5px, -5px)" : "none",
-            }}/>
+          <button onClick={() => setMobileOpen(v => !v)} style={{
+            background: mobileOpen ? "rgba(56,189,248,0.12)" : "var(--bg3)",
+            border:`1px solid ${mobileOpen ? "rgba(56,189,248,0.4)" : "var(--border)"}`,
+            borderRadius:"10px", padding:"9px 11px", cursor:"pointer",
+            display:"flex", flexDirection:"column", gap:"5px",
+            alignItems:"center", justifyContent:"center",
+          }}>
+            <span style={{ display:"block", width:"20px", height:"2px", background:mobileOpen?"var(--accent)":"var(--text2)", borderRadius:"2px", transition:"all 0.25s", transform:mobileOpen?"rotate(45deg) translate(5px, 5px)":"none" }}/>
+            <span style={{ display:"block", width:"20px", height:"2px", background:mobileOpen?"transparent":"var(--text2)", borderRadius:"2px", transition:"all 0.25s" }}/>
+            <span style={{ display:"block", width:"20px", height:"2px", background:mobileOpen?"var(--accent)":"var(--text2)", borderRadius:"2px", transition:"all 0.25s", transform:mobileOpen?"rotate(-45deg) translate(5px, -5px)":"none" }}/>
           </button>
         </div>
 
@@ -317,7 +360,6 @@ export default function Navbar({ page, setPage, user, favCount, onLoginClick, on
         `}</style>
       </nav>
 
-      {/* Mobile menu portal */}
       {mobileMenu}
     </>
   );
